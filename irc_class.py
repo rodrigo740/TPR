@@ -1,14 +1,18 @@
 import socket
+import ssl
 import sys
 import time
 
 class IRC:
  
     irc = socket.socket()
-  
+    irc = ssl.wrap_socket(irc, certfile='openssl/server.pem', ssl_version=ssl.PROTOCOL_TLSv1_2)
+    
     def __init__(self):
         # Define the socket
+        #ctx = ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
         self.irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        
  
     def send(self, channel, msg):
         # Transfer data

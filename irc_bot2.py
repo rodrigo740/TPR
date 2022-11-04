@@ -4,7 +4,7 @@ import random
 
 ## IRC Config
 server = "127.0.0.1" # Provide a valid server IP/Hostname
-port = 6667
+port = 6697
 channel = "#python"
 botnick = "bot2"
 botnickpass = "botpass"
