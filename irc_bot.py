@@ -1,12 +1,13 @@
 from irc_class import *
 import os
 import random
+import time
 
 ## IRC Config
 server = "127.0.0.1" # Provide a valid server IP/Hostname
-port = 443
+port = 6697
 channel = "#python"
-botnick = "bot"
+botnick = "sender"
 botnickpass = "botpass"
 botpass = "<%= @botpass %>"
 irc = IRC()
@@ -15,7 +16,11 @@ irc.connect(server, port, channel, botnick, botpass, botnickpass)
 while True:
     text = irc.get_response()
     print(text)
- 
-    #if "PRIVMSG" in text and channel in text and "hello" in text:
-    irc.send(channel, "Hello!")
-    print("msg sent")
+
+    print("Command to send: ")
+    cmd = input()
+    if cmd != "":
+        irc.send(channel, cmd)
+        print(cmd)
+    #time.sleep(1)
+        
