@@ -19,10 +19,5 @@ RUN /usr/bin/ssh-keygen -A
 # add password to root user (username:password)
 RUN echo 'root:root' | chpasswd
 
-# expose tcp ports
-EXPOSE 22
-EXPOSE 443  
-EXPOSE 6667
-
 # run openssh daemon
 CMD ["/usr/sbin/sshd", "-D"]
