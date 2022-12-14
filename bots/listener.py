@@ -4,9 +4,9 @@ import random
 import subprocess
 
 ## IRC Config
-server = "127.0.0.1" # Provide a valid server IP/Hostname
+server = "127.0.0.1"
 port = 6697
-channel = "#python"
+channel = "#tpr"
 botnick = "receiver"
 botnickpass = "botpass"
 botpass = "<%= @botpass %>"

@@ -10,7 +10,7 @@ class IRC:
         # Define the socket
         #ctx = ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
         self.irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.irc = ssl.wrap_socket(self.irc, certfile='openssl/server.crt', keyfile='openssl/server.key')
+        self.irc = ssl.wrap_socket(self.irc, certfile='../openssl/server.crt', keyfile='../openssl/server.key')
 
     def send(self, channel, msg):
         # Transfer data
