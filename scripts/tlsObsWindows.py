@@ -28,7 +28,7 @@ def slidingObsWindow(data,lengthObsWindow,slidingValue,basename):
         obsFname="{}_obs{}_w{}.dat".format(basename,iobs,lengthObsWindow)
         iobs+=1
         np.savetxt(obsFname,subdata,fmt= '%d %d %d %d %d %d %d %f %f') # specify output format for all columns
-               
+
     return obsData # 3D arrays (obs, sample, metric)
         
 def slidingMultObsWindow(data,allLengthsObsWindow,slidingValue,basename):
