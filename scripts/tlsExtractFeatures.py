@@ -70,9 +70,8 @@ def extractFeatures(dirname,basename,nObs,allwidths):
         features=np.array([])
         for oW in allwidths:
             obsfilename=dirname+"/"+basename+str(o)+"_w"+str(oW)+".dat"
-            print(obsfilename)
-            subdata=np.loadtxt(obsfilename)[:,3:]    #Loads data and removes first column (sample index)
-                                                     # followed by second and third column (ports)
+            #print(obsfilename)
+            subdata=np.loadtxt(obsfilename)[:,5:]    # loads data and keeps only metric columns 
                 
             faux=extractStats(subdata)    
             features=np.hstack((features,faux))

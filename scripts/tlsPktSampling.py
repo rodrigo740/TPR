@@ -16,7 +16,7 @@ class FlowIndex:  # to check which tcp flow a packet belongs to
         return (self.srcPort == other.srcPort and self.dstport == other.dstport) or (self.srcPort == other.dstport and self.dstport == other.srcPort)
 
 # flow metadata format:
-# [srcPort, dstPort, #inbound_bytes, #outbound_bytes, #inbound_packets, #outbound_packets, initial_timestamp, flow_duration]
+# [stream, srcPort, dstPort, initial_timestamp, #inbound_bytes, #outbound_bytes, #inbound_packets, #outbound_packets, flow_duration]
 flows = {}
 
 def pktHandler(pkt,sampDelta,outfile):
@@ -31,17 +31,18 @@ def pktHandler(pkt,sampDelta,outfile):
 
     srcPort = pkt.tcp.srcPort
     dstport = pkt.tcp.dstport
+    stream = pkt.tcp.stream
 
     flowIndex = FlowIndex(srcPort, dstport)
     
     if (IPAddress(srcIP) in scnets and IPAddress(dstIP) in ssnets) or (IPAddress(srcIP) in ssnets and IPAddress(dstIP) in scnets):
 
         if flowIndex not in flows:
-            flows[flowIndex] = [srcPort, dstport, 0, 0, 0, 0, float(timestamp), 0]
+            flows[flowIndex] = [stream, srcPort, dstport, float(timestamp), 0, 0, 0, 0, 0]
 
         flow = flows[flowIndex]
 
-        flow[7] = float(timestamp) - flow[6]         # flow duration
+        flow[8] = float(timestamp) - flow[3]         # flow duration
 
         if npkts==0:
             T0=float(timestamp)
@@ -51,25 +52,24 @@ def pktHandler(pkt,sampDelta,outfile):
         
         if ks>last_ks:
             outfile.write('{} {} {} {} {} {} {} {} {}\n'.format(last_ks,*flow))
-            print('{} {} {} {} {} {} {} {} {}'.format(last_ks,*flow))
-            flow[2] = 0
-            flow[3] = 0
-            flow[4] = 0
-            flow[5] = 0
+            #print('{} {} {} {} {} {} {} {} {}'.format(last_ks,*flow))
             flow[7] = 0
+            flow[5] = 0
+            flow[6] = 0
+            flow[4] = 0
             
         if ks>last_ks+1:
             for j in range(last_ks+1,ks):
                 outfile.write('{} {} {} {} {} {} {} {} {}\n'.format(j,*flow))
-                print('{} {} {} {} {} {} {} {} {}'.format(j,*flow))
+                #print('{} {} {} {} {} {} {} {} {}'.format(j,*flow))
         
         if IPAddress(srcIP) in scnets: #Upload (outbound)
-            flow[5] = flow[5] + 1                   # outbound packets
-            flow[3] = flow[3] + int(lengthIP)       # outbound bytes
+            flow[7] = flow[7] + 1                   # outbound packets
+            flow[5] = flow[5] + int(lengthIP)       # outbound bytes
 
         if IPAddress(dstIP) in scnets: #Download (inbound)
-            flow[4] = flow[4] + 1                   # inbound packets
-            flow[2] = flow[2] + int(lengthIP)       # inbound bytes
+            flow[6] = flow[6] + 1                   # inbound packets
+            flow[4] = flow[4] + int(lengthIP)       # inbound bytes
         
         last_ks=ks
         npkts=npkts+1
@@ -157,7 +157,7 @@ def main():
     
     outfile.close()
 
-    print("Total packets: " + str(npkts))
+    print("Total TLS packets: " + str(npkts))
 
 if __name__ == '__main__':
     main()
