@@ -16,7 +16,7 @@ while read sampling width sliding
 do
     now=$(date +"%r")
     echo "1. Run Packet Sampling at $now"
-    python3 tlsPktSampling.py -i $1 -o out.dat -f 3 -d $sampling -c 192.168.1.0/24 -s 0.0.0.0/0
+    python3 tlsPktSampling.py -i $1 -o out.dat -f 3 -d $sampling -c 0.0.0.0/0 -s 0.0.0.0/0
 
     now=$(date +"%r")
     echo "2. Run Observation Windows from Packet Sampling at $now"
@@ -38,7 +38,7 @@ do
 
     now=$(date +"%r")
     echo "1. Run Packet Sampling at $now"
-    python3 tlsPktSampling.py -i attack.pcap -o out.dat -f 3 -d $sampling -c 192.168.1.0/24 -s 0.0.0.0/0
+    python3 tlsPktSampling.py -i attack.pcap -o out.dat -f 3 -d $sampling -c 0.0.0.0/0 -s 0.0.0.0/0
 
     now=$(date +"%r")
     echo "2. Run Observation Windows from Packet Sampling at $now"
