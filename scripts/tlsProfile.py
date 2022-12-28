@@ -48,6 +48,12 @@ features=np.vstack((features_normal))
 
 print('Train Stats Features Size:',features.shape)
 
+oClass_normal=np.ones((len(features),1))*0
+oClass=np.vstack((oClass_normal))
+
+plt.figure(4)
+plotFeatures(features,oClass,0,1)#0,8
+
 # load silence data
 
 features_normalSilence=np.loadtxt("normal_obs_sil_features.dat")
@@ -94,3 +100,26 @@ poly_ocsvm = svm.OneClassSVM(gamma='scale',kernel='poly',degree=2).fit(i2trainFe
 joblib.dump(ocsvm, type(ocsvm).__name__+"(linear).model", compress=9)
 joblib.dump(rbf_ocsvm, type(rbf_ocsvm).__name__+"(rbf).model", compress=9)
 joblib.dump(poly_ocsvm, type(poly_ocsvm).__name__+"(poly).model", compress=9)
+
+# load test data
+
+features_malicious=np.loadtxt("malicious_obs_features.dat")
+featuresMalicious=np.vstack((features_malicious))
+
+features_maliciousSilence=np.loadtxt("malicious_obs_sil_features.dat")
+featuresMaliciousSilence=np.vstack((features_maliciousSilence))
+
+i3testFeatures=np.hstack((featuresMalicious,featuresMaliciousSilence))
+i3testFeaturesN=i2trainScaler.transform(i3testFeatures)
+
+# predict test data
+
+L1=ocsvm.predict(i3testFeatures)
+L2=rbf_ocsvm.predict(i3testFeatures)
+L3=poly_ocsvm.predict(i3testFeatures)
+
+AnomResults={-1:"MALICIOUS",1:"NORMAL"}
+
+nObsTest,nFea=i3testFeatures.shape
+for i in range(nObsTest):
+    print('Obs: {:2}: Kernel Linear->{:<10} | Kernel RBF->{:<10} | Kernel Poly->{:<10}'.format(i,AnomResults[L1[i]],AnomResults[L2[i]],AnomResults[L3[i]]))
