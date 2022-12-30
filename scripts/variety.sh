@@ -54,6 +54,6 @@ do
 
     python3 tlsProfile.py > "profile_"$sampling"_"$width"_"$sliding
 
-     rm -r "out_obs_s"$sliding"_m2/"
+    rm -r "out_obs_s"$sliding"_m2/"
 done < $INPUT
 IFS=$OLDIFS

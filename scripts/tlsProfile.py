@@ -114,12 +114,12 @@ i3testFeaturesN=i2trainScaler.transform(i3testFeatures)
 
 # predict test data
 
-L1=ocsvm.predict(i3testFeatures)
-L2=rbf_ocsvm.predict(i3testFeatures)
-L3=poly_ocsvm.predict(i3testFeatures)
+L1=ocsvm.predict(i3testFeaturesN)
+L2=rbf_ocsvm.predict(i3testFeaturesN)
+L3=poly_ocsvm.predict(i3testFeaturesN)
 
 AnomResults={-1:"MALICIOUS",1:"NORMAL"}
 
-nObsTest,nFea=i3testFeatures.shape
+nObsTest,nFea=i3testFeaturesN.shape
 for i in range(nObsTest):
     print('Obs: {:2}: Kernel Linear->{:<10} | Kernel RBF->{:<10} | Kernel Poly->{:<10}'.format(i,AnomResults[L1[i]],AnomResults[L2[i]],AnomResults[L3[i]]))
