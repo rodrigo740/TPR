@@ -66,12 +66,13 @@ def extractStatsSilenceActivity(data):
     return(features)
 
 def extractFeatures(dirname,basename,nObs,allwidths):
+    obsFeatures=np.array([])
     for o in range(0,nObs):
         features=np.array([])
         for oW in allwidths:
             obsfilename=dirname+"/"+basename+str(o)+"_w"+str(oW)+".dat"
             #print(obsfilename)
-            subdata=np.loadtxt(obsfilename)[:,5:]    # loads data and keeps only metric columns 
+            subdata=np.loadtxt(obsfilename)[:,5:]     # loads data and keeps only metric columns 
                 
             faux=extractStats(subdata)    
             features=np.hstack((features,faux))

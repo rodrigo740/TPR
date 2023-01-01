@@ -16,7 +16,20 @@ class FlowIndex:  # to check which tcp flow a packet belongs to
         return (self.srcPort == other.srcPort and self.dstport == other.dstport) or (self.srcPort == other.dstport and self.dstport == other.srcPort)
 
 # flow metadata format:
-# [stream, srcPort, dstPort, initial_timestamp, #inbound_bytes, #outbound_bytes, #inbound_packets, #outbound_packets, flow_duration]
+#   - stream index
+#   - srcPort
+#   - dstPort
+#   - initial flow timestamp
+#   - number of inbound bytes
+#   - number of outbound bytes
+#   - number of inbound packets
+#   - number of outbound packets
+#   - flow duration
+#   - number of supported client tls cipher suites
+#   - number of supported client tls extensions
+#   - number of supported client tls elliptic curve groups
+#   - number of supported client tls elliptic curve point formats
+#   - number of supported server tls extensions
 flows = {}
 
 def pktHandler(pkt,sampDelta,outfile):
@@ -38,11 +51,9 @@ def pktHandler(pkt,sampDelta,outfile):
     if (IPAddress(srcIP) in scnets and IPAddress(dstIP) in ssnets) or (IPAddress(srcIP) in ssnets and IPAddress(dstIP) in scnets):
 
         if flowIndex not in flows:
-            flows[flowIndex] = [stream, srcPort, dstport, float(timestamp), 0, 0, 0, 0, 0]
+            flows[flowIndex] = [stream, srcPort, dstport, float(timestamp), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
         flow = flows[flowIndex]
-
-        flow[8] = float(timestamp) - flow[3]         # flow duration
 
         if npkts==0:
             T0=float(timestamp)
@@ -51,8 +62,7 @@ def pktHandler(pkt,sampDelta,outfile):
         ks=int((float(timestamp)-T0)/sampDelta)
         
         if ks>last_ks:
-            outfile.write('{} {} {} {} {} {} {} {} {}\n'.format(last_ks,*flow))
-            #print('{} {} {} {} {} {} {} {} {}'.format(last_ks,*flow))
+            outfile.write('{} {} {} {} {} {} {} {} {} {} {} {} {} {} {}\n'.format(last_ks,*flow))
             flow[7] = 0
             flow[5] = 0
             flow[6] = 0
@@ -60,8 +70,11 @@ def pktHandler(pkt,sampDelta,outfile):
             
         if ks>last_ks+1:
             for j in range(last_ks+1,ks):
-                outfile.write('{} {} {} {} {} {} {} {} {}\n'.format(j,*flow))
-                #print('{} {} {} {} {} {} {} {} {}'.format(j,*flow))
+                outfile.write('{} {} {} {} {} {} {} {} {} {} {} {} {} {} {}\n'.format(j,*flow))
+            flow[7] = 0
+            flow[5] = 0
+            flow[6] = 0
+            flow[4] = 0
         
         if IPAddress(srcIP) in scnets: #Upload (outbound)
             flow[7] = flow[7] + 1                   # outbound packets
@@ -70,7 +83,19 @@ def pktHandler(pkt,sampDelta,outfile):
         if IPAddress(dstIP) in scnets: #Download (inbound)
             flow[6] = flow[6] + 1                   # inbound packets
             flow[4] = flow[4] + int(lengthIP)       # inbound bytes
-        
+
+        flow[8] = float(timestamp) - flow[3]        # flow duration
+
+        # tls handshake
+        if 'TLS' in str(pkt.layers) and 'handshake' in pkt.tls.field_names:
+            if pkt.tls.handshake == 'Handshake Protocol: Client Hello':
+                flow[9] = pkt.tls.handshake_cipher_suites_length                    # number of supported client tls cipher suites
+                flow[10] = pkt.tls.handshake_extensions_length                      # number of supported client tls extensions
+                flow[11] = pkt.tls.handshake_extensions_supported_groups_length     # number of supported client tls elliptic curve groups
+                flow[12] = pkt.tls.handshake_extensions_ec_point_formats_length     # number of supported client tls elliptic curve point formats
+            elif pkt.tls.handshake == 'Handshake Protocol: Server Hello':
+                flow[13] = pkt.tls.handshake_extensions_length                      # number of supported server tls extensions
+
         last_ks=ks
         npkts=npkts+1
 
@@ -151,9 +176,10 @@ def main():
                 pktHandler(timestamp,srcIP,dstIP,lengthIP,sampDelta,outfile)
         infile.close()
     elif fileFormat==3: #pcap format
-        capture = pyshark.FileCapture(fileInput,display_filter='tls && tcp', keep_packets=False) # grab all tls packets
+        capture = pyshark.FileCapture(fileInput,display_filter='tls && tcp') # grab all tls packets
         for pkt in capture:
             pktHandler(pkt,sampDelta,outfile)
+
     
     outfile.close()
 
