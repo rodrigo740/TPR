@@ -33,7 +33,7 @@ class TLSFlow:
         self.dstPort = dstport
         self.start_time = 0
         self.duration = 0
-        self.end = False
+        self.endFlags = 0
         self.inbound_byte_count = 0
         self.outbound_byte_count = 0
         self.inbound_packet_count = 0
@@ -116,8 +116,8 @@ def pktHandler(pkt,sampDelta,outfile):
             flows[flow].tls_packet_count += 1           # tls packet
         elif 'TCP' in str(pkt.layers):
             flows[flow].tcp_packet_count += 1           # tcp only packet
-            if (pkt.tcp.flags_fin.int_value and pkt.tcp.flags_ack.int_value) or pkt.tcp.flags_reset.int_value:
-                flows[flow].end = True                  # connection closed
+            if pkt.tcp.flags_fin.int_value:
+                flows[flow].endFlags += 1               
 
         if IPAddress(srcIP) in scnets: #Upload (outbound)
             flows[flow].outbound_packet_count += 1                      # outbound packets
@@ -151,7 +151,7 @@ def pktHandler(pkt,sampDelta,outfile):
                 extract_metrics(outfile, flow)
             metrics_extracted = True
             
-        if flows[flow].end:
+        if flows[flow].endFlags == 2 or pkt.tcp.flags_reset.int_value:
             if not metrics_extracted:
                 extract_metrics(outfile, flow)
             del flows[flow]         # flow ended

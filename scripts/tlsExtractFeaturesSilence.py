@@ -10,15 +10,16 @@ import os
 def extractStats(data):
     nSamp,nCols=data.shape
 
-    M1 = np.mean(data,axis=0)
-    Md1 = np.median(data,axis=0)
-    Std1 = np.std(data,axis=0)
+    Means = np.mean(data[:,:7],axis=0)
+    Medians = np.median(data[:,:7],axis=0)
+    Deviations = np.std(data,axis=0)
     #S1=stats.skew(data)
+    #S1 = [0 if math.isnan(x) else x for x in S1]
     #K1=stats.kurtosis(data)
     #p=[75,90,95,98]
     #Pr1=np.array(np.percentile(data,p,axis=0)).T.flatten()
         
-    features=np.hstack((M1,Md1,Std1))
+    features=np.hstack((Means,Medians,Deviations))
 
     return(features)
 
