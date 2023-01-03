@@ -10,16 +10,15 @@ import os
 def extractStats(data):
     nSamp,nCols=data.shape
 
-    M1=np.mean(data,axis=0)
-    Md1=np.median(data,axis=0)
-    Std1=np.std(data,axis=0)
-    S1=stats.skew(data)
-    S1 = [0 if math.isnan(x) else x for x in S1]
+    M1 = np.mean(data,axis=0)
+    Md1 = np.median(data,axis=0)
+    Std1 = np.std(data,axis=0)
+    #S1=stats.skew(data)
     #K1=stats.kurtosis(data)
-    p=[75,90,95,98]
-    Pr1=np.array(np.percentile(data,p,axis=0)).T.flatten()
+    #p=[75,90,95,98]
+    #Pr1=np.array(np.percentile(data,p,axis=0)).T.flatten()
         
-    features=np.hstack((M1,Md1,Std1,S1,Pr1))
+    features=np.hstack((M1,Md1,Std1))
 
     return(features)
 
@@ -46,7 +45,7 @@ def extractStatsSilenceActivity(data):
     nSamples,nMetrics=data.shape
     silence_features=np.array([])
     activity_features=np.array([])
-    for c in range(nMetrics):
+    for c in range(3,5):    # get silence activity according to packets
         silence,activity=extratctSilenceActivity(data[:,c],threshold=0)
         
         if len(silence)>0:
@@ -71,8 +70,7 @@ def extractFeatures(dirname,basename,nObs,allwidths):
         for oW in allwidths:
             obsfilename=dirname+"/"+basename+str(o)+"_w"+str(oW)+".dat"
             #print(obsfilename)
-            subdata=np.loadtxt(obsfilename)[:,5:]    #Loads data and removes first column (sample index)
-                                                     # followed by second and third column (ports)
+            subdata=np.loadtxt(obsfilename)    #Loads data 
                 
             #faux=extractStats(subdata)    
             #features=np.hstack((features,faux))
