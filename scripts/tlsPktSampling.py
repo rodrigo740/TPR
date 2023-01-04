@@ -4,75 +4,160 @@ import datetime
 from netaddr import IPNetwork, IPAddress, IPSet
 import pyshark
 
-class FlowIndex:  # to check which tcp flow a packet belongs to
-    def __init__(self, srcPort, dstport):
+# tls flow metadata format:
+#   - stream index
+#   - srcIP
+#   - dstIP
+#   - srcPort
+#   - dstPort
+#   - initial flow timestamp
+#   - flow duration
+#   - flow ended flag
+#   - number of inbound bytes
+#   - number of outbound bytes
+#   - number of inbound packets
+#   - number of outbound packets
+#   - number of tcp packets
+#   - number of tls packets
+#   - number of supported client tls cipher suites
+#   - number of supported client tls extensions
+#   - number of supported client tls elliptic curve groups
+#   - number of supported client tls elliptic curve point formats
+#   - number of supported server tls extensions
+class TLSFlow:
+    def __init__(self, stream, srcIP, dstIP, srcPort, dstport):
+        self.stream = stream
+        self.srcIP = srcIP
+        self.dstIP = dstIP
         self.srcPort = srcPort
-        self.dstport = dstport
+        self.dstPort = dstport
+        self.start_time = 0
+        self.duration = 0
+        self.endFlags = 0
+        self.inbound_byte_count = 0
+        self.outbound_byte_count = 0
+        self.inbound_packet_count = 0
+        self.outbound_packet_count = 0
+        self.tcp_packet_count = 0
+        self.tls_packet_count = 0
+        self.tls_client_cipher_suite_count = 0
+        self.tls_client_extension_count = 0
+        self.tls_client_elliptic_curve_group_count = 0
+        self.tls_client_elliptic_curve_point_format_count = 0
+        self.tls_server_extension_count = 0
 
     def __hash__(self):
-        return hash(self.srcPort) + hash(self.dstport)
+        return hash(self.srcIP) + hash(self.dstIP) + hash(self.srcPort) + hash(self.dstPort)
     
     def __eq__(self, other):
-        return (self.srcPort == other.srcPort and self.dstport == other.dstport) or (self.srcPort == other.dstport and self.dstport == other.srcPort)
+        return ((self.srcIP == other.srcIP and self.dstIP == other.dstIP) or (self.srcIP == other.dstIP and self.dstIP == other.srcIP)) and \
+            ((self.srcPort == other.srcPort and self.dstPort == other.dstPort) or (self.srcPort == other.dstPort and self.dstPort == other.srcPort))
 
-# flow metadata format:
-# [stream, srcPort, dstPort, initial_timestamp, #inbound_bytes, #outbound_bytes, #inbound_packets, #outbound_packets, flow_duration]
 flows = {}
+
+def clear_flow(flow):
+    flows[flow].outbound_packet_count = 0
+    flows[flow].outbound_byte_count = 0
+    flows[flow].inbound_packet_count = 0
+    flows[flow].inbound_byte_count = 0
+    flows[flow].tcp_packet_count = 0
+    flows[flow].tls_packet_count = 0
+
+def extract_metrics(outfile, flow):
+    outfile.write('{} {} {} {} {} {} {} {} {} {} {} {}\n'.format(
+                    flows[flow].duration,                                               # 0
+                    flows[flow].inbound_byte_count,                                     # 1
+                    flows[flow].outbound_byte_count,                                    # 2
+                    flows[flow].inbound_packet_count,                                   # 3
+                    flows[flow].outbound_packet_count,                                  # 4
+                    flows[flow].tcp_packet_count,                                       # 5
+                    flows[flow].tls_packet_count,                                       # 6
+                    flows[flow].tls_client_cipher_suite_count,                          # 7
+                    flows[flow].tls_client_extension_count,                             # 8
+                    flows[flow].tls_client_elliptic_curve_group_count,                  # 9
+                    flows[flow].tls_client_elliptic_curve_point_format_count,           # 10
+                    flows[flow].tls_server_extension_count                              # 11
+    ))
 
 def pktHandler(pkt,sampDelta,outfile):
     global scnets
     global ssnets
     global npkts
-    global T0
-    global outc
     global last_ks
+    global T0
 
     timestamp,srcIP,dstIP,lengthIP = pkt.sniff_timestamp,pkt.ip.src,pkt.ip.dst,pkt.ip.len
-
-    srcPort = pkt.tcp.srcPort
-    dstport = pkt.tcp.dstport
-    stream = pkt.tcp.stream
-
-    flowIndex = FlowIndex(srcPort, dstport)
     
     if (IPAddress(srcIP) in scnets and IPAddress(dstIP) in ssnets) or (IPAddress(srcIP) in ssnets and IPAddress(dstIP) in scnets):
 
-        if flowIndex not in flows:
-            flows[flowIndex] = [stream, srcPort, dstport, float(timestamp), 0, 0, 0, 0, 0]
+        try:
+            srcPort = pkt.tcp.srcPort
+            dstport = pkt.tcp.dstport
+            stream = pkt.tcp.stream
+        except AttributeError:
+            print("AttributeError on packet:")
+            print(pkt)
+            print("Skipping packet...")
+            return 
 
-        flow = flows[flowIndex]
+        if npkts == 0:
+            T0 = float(timestamp)
+            last_ks = 0
 
-        flow[8] = float(timestamp) - flow[3]         # flow duration
+        flow = TLSFlow(stream, srcIP, dstIP, srcPort, dstport)
 
-        if npkts==0:
-            T0=float(timestamp)
-            last_ks=0
-            
-        ks=int((float(timestamp)-T0)/sampDelta)
-        
-        if ks>last_ks:
-            outfile.write('{} {} {} {} {} {} {} {} {}\n'.format(last_ks,*flow))
-            #print('{} {} {} {} {} {} {} {} {}'.format(last_ks,*flow))
-            flow[7] = 0
-            flow[5] = 0
-            flow[6] = 0
-            flow[4] = 0
-            
-        if ks>last_ks+1:
-            for j in range(last_ks+1,ks):
-                outfile.write('{} {} {} {} {} {} {} {} {}\n'.format(j,*flow))
-                #print('{} {} {} {} {} {} {} {} {}'.format(j,*flow))
-        
+        if flow not in flows:           # new tls flow
+            flow.start_time = float(timestamp)
+            flows[flow] = flow
+
+        flow = flows[flow]
+
+        if 'TLS' in str(pkt.layers):
+            flows[flow].tls_packet_count += 1           # tls packet
+        elif 'TCP' in str(pkt.layers):
+            flows[flow].tcp_packet_count += 1           # tcp only packet
+            if pkt.tcp.flags_fin.int_value:
+                flows[flow].endFlags += 1               
+
         if IPAddress(srcIP) in scnets: #Upload (outbound)
-            flow[7] = flow[7] + 1                   # outbound packets
-            flow[5] = flow[5] + int(lengthIP)       # outbound bytes
+            flows[flow].outbound_packet_count += 1                      # outbound packets
+            flows[flow].outbound_byte_count += int(lengthIP)            # outbound bytes
 
         if IPAddress(dstIP) in scnets: #Download (inbound)
-            flow[6] = flow[6] + 1                   # inbound packets
-            flow[4] = flow[4] + int(lengthIP)       # inbound bytes
+            flows[flow].inbound_packet_count += 1                       # inbound packets
+            flows[flow].inbound_byte_count += int(lengthIP)             # inbound bytes
+
+        flows[flow].duration = float(timestamp) - flows[flow].start_time        # flow duration
+
+        if 'TLS' in str(pkt.layers) and 'handshake' in pkt.tls.field_names:     # tls handshake
+            if pkt.tls.handshake == 'Handshake Protocol: Client Hello':
+                flows[flow].tls_client_cipher_suite_count = pkt.tls.handshake_cipher_suites_length                              # number of supported client tls cipher suites
+                flows[flow].tls_client_extension_count = pkt.tls.handshake_extensions_length                                    # number of supported client tls extensions
+                flows[flow].tls_client_elliptic_curve_group_count = pkt.tls.handshake_extensions_supported_groups_length        # number of supported client tls elliptic curve groups
+                flows[flow].tls_client_elliptic_curve_point_format_count = pkt.tls.handshake_extensions_ec_point_formats_length # number of supported client tls elliptic curve point formats
+            elif pkt.tls.handshake == 'Handshake Protocol: Server Hello':
+                flows[flow].tls_server_extension_count = pkt.tls.handshake_extensions_length    # number of supported server tls extensions   
+            
+        ks = int((float(timestamp)-T0)/sampDelta)
+        metrics_extracted = False
+        
+        if ks > last_ks:
+            extract_metrics(outfile, flow)
+            clear_flow(flow)
+            metrics_extracted = True
+
+        if ks > last_ks+1:
+            for j in range(last_ks+1,ks):
+                extract_metrics(outfile, flow)
+            metrics_extracted = True
+            
+        if flows[flow].endFlags == 2 or pkt.tcp.flags_reset.int_value:
+            if not metrics_extracted:
+                extract_metrics(outfile, flow)
+            del flows[flow]         # flow ended
         
         last_ks=ks
-        npkts=npkts+1
+        npkts += 1
 
 
 def main():
@@ -129,12 +214,10 @@ def main():
         fileOutput=args.output
         
     global npkts
-    global T0
-    global outc
     global last_ks
+    global T0
 
     npkts=0
-    outc=[0,0,0,0]
     print('Sampling interval: {} second'.format(sampDelta))
 
     outfile = open(fileOutput,'w') 
@@ -151,13 +234,14 @@ def main():
                 pktHandler(timestamp,srcIP,dstIP,lengthIP,sampDelta,outfile)
         infile.close()
     elif fileFormat==3: #pcap format
-        capture = pyshark.FileCapture(fileInput,display_filter='tls && tcp', keep_packets=False) # grab all tls packets
+        capture = pyshark.FileCapture(fileInput,display_filter='tcp and (tcp.dstport==443 or tcp.srcport==443)') # grab all tls flow packets
         for pkt in capture:
             pktHandler(pkt,sampDelta,outfile)
+
     
     outfile.close()
 
-    print("Total TLS packets: " + str(npkts))
+    print("Total TLS flow packets: " + str(npkts))
 
 if __name__ == '__main__':
     main()

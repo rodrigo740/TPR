@@ -13,7 +13,7 @@ def seqObsWindow(data,lengthObsWindow,basename):
         
         obsFname="{}_obs{}_w{}.dat".format(basename,iobs,lengthObsWindow)
         iobs+=1
-        np.savetxt(obsFname,subdata,fmt= '%d %d %d %d %d %d %d %f %f') # specify output format for all columns
+        np.savetxt(obsFname,subdata,fmt= '%f')
                 
     return obsData # 3D arrays (obs, sample, metric)
         
@@ -27,7 +27,7 @@ def slidingObsWindow(data,lengthObsWindow,slidingValue,basename):
         
         obsFname="{}_obs{}_w{}.dat".format(basename,iobs,lengthObsWindow)
         iobs+=1
-        np.savetxt(obsFname,subdata,fmt= '%d %d %d %f %d %d %d %d %f') # specify output format for all columns
+        np.savetxt(obsFname,subdata,fmt= '%f')
 
     return obsData # 3D arrays (obs, sample, metric)
         
@@ -46,7 +46,7 @@ def slidingMultObsWindow(data,allLengthsObsWindow,slidingValue,basename):
                 obsDataList[i]=np.insert(obsDataList[i],iobs,subdata,axis=0)
                 
                 obsFname="{}_obs{}_w{}.dat".format(basename,iobs,oW)
-                np.savetxt(obsFname,subdata,fmt= '%d %d %d %d %d %d %d %f %f') # specify output format for all columns
+                np.savetxt(obsFname,subdata,fmt= '%f')
                 
             iobs+=1
     
