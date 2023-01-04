@@ -14,3 +14,14 @@ $ cd bots
 $ python3 talker.py
 $ python3 listener.py
 ```
+
+### Launch Stunnel
+Infected client connects to an external SSH server via a TLS tunnel.
+Run on infected client:
+```
+$ stunnel stunnel-infected.conf
+```
+Run on attacker server:
+```
+$ stunnel stunnel-attacker.conf
+```
